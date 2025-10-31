@@ -1,0 +1,188 @@
+#include <stdio.h>
+#define A 0
+#define B 1
+#define C 2
+#define MAX_NODES 1000
+#define O 1000000000
+int n;
+int e;
+int capacity[MAX_NODES][MAX_NODES];
+int flow[MAX_NODES][MAX_NODES];
+int color[MAX_NODES];
+int pred[MAX_NODES];
+
+int min(int x, int y) {
+  return x < y ? x : y;
+}
+
+int head, tail;
+int q[MAX_NODES + 2];
+void enqueue(int x) {
+  q[tail] = x;
+  tail++;
+  color[x] = B;
+}
+
+int dequeue() {
+  int x = q[head];
+  head++;
+  color[x] = C;
+  return x;
+}
+
+// Using BFS as a searching algorithm
+int bfs(int start, int target) {
+  int u, v;
+  for (u = 0; u < n; u++) {
+    color[u] = A;
+  }
+  head = tail = 0;
+  enqueue(start);
+  pred[start] = -1;
+  while (head != tail) {
+    u = dequeue();
+    for (v = 0; v < n; v++) {
+      if (color[v] == A && capacity[u][v] - flow[u][v] > 0) {
+        enqueue(v);
+        pred[v] = u;
+      }
+    }
+  }
+  return color[target] == C;
+}
+
+// Applying fordfulkerson algorithm
+int fordFulkerson(int source, int sink) {
+  int i, j, u;
+  int max_flow = 0;
+  for (i = 0; i < n; i++) {
+    for (j = 0; j < n; j++) {
+      flow[i][j] = 0;
+    }
+  }
+
+  // Updating the residual values of edges
+  while (bfs(source, sink)) {
+    int increment = O;
+    for (u = n - 1; pred[u] >= 0; u = pred[u]) {
+      increment = min(increment, capacity[pred[u]][u] - flow[pred[u]][u]);
+    }
+    for (u = n - 1; pred[u] >= 0; u = pred[u]) {
+      flow[pred[u]][u] += increment;
+      flow[u][pred[u]] -= increment;
+    }
+    // Adding the path flows
+    max_flow += increment;
+  }
+  return max_flow;
+}
+
+int main() {
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      capacity[i][j] = 0;
+    }
+  }
+  n = 6;
+  e = 7;
+
+  capacity[0][1] = 18;
+  capacity[0][4] = 13;
+  capacity[1][2] =19;
+  capacity[2][4] = 17;
+  capacity[2][5] =12;
+  capacity[3][5] = 15;
+  capacity[4][2] = 17;
+  capacity[4][3] = 14;
+
+  int s = 0, t = 5;
+  printf("Max Flow: %d\n", fordFulkerson(s, t));
+}
+#include <stdio.h>
+#include <stdbool.h>
+#include <limits.h>
+
+#define V 6 // Number of vertices in the graph
+
+// Function to find the minimum of two values
+int min(int a, int b) {
+    return a < b ? a : b;
+}
+
+// Depth-First Search (DFS) to find an augmenting path in the residual graph
+bool dfs(int graph[V][V], int source, int sink, bool visited[], int parent[]) {
+    visited[source] = true;
+
+    for (int v = 0; v < V; v++) {
+        if (!visited[v] && graph[source][v] > 0) {
+            parent[v] = source;
+            if (v == sink) {
+                return true; // Found an augmenting path
+            }
+            if (dfs(graph, v, sink, visited, parent)) {
+                return true; // Continue searching
+            }
+        }
+    }
+
+    return false;
+}
+
+// Ford-Fulkerson Algorithm to find maximum flow in the graph
+int fordFulkerson(int graph[V][V], int source, int sink) {
+    int residualGraph[V][V];
+    int parent[V];
+    bool visited[V];
+
+    // Initialize residual graph as original graph
+    for (int i = 0; i < V; i++) {
+        for (int j = 0; j < V; j++) {
+            residualGraph[i][j] = graph[i][j];
+        }
+    }
+
+    int maxFlow = 0; // Initialize max flow
+
+    // Find augmenting paths and update residual graph
+    while (dfs(residualGraph, source, sink, visited, parent)) {
+        // Find minimum residual capacity of the augmenting path
+        int pathFlow = INT_MAX;
+        for (int v = sink; v != source; v = parent[v]) {
+            int u = parent[v];
+            pathFlow = min(pathFlow, residualGraph[u][v]);
+        }
+
+        // Update residual capacities and reverse edges
+        for (int v = sink; v != source; v = parent[v]) {
+            int u = parent[v];
+            residualGraph[u][v] -= pathFlow;
+            residualGraph[v][u] += pathFlow;
+        }
+
+        // Add path flow to overall flow
+        maxFlow += pathFlow;
+
+        // Reset visited array for next DFS
+        for (int i = 0; i < V; i++) {
+            visited[i] = false;
+        }
+    }
+
+    return maxFlow;
+}
+
+int main() {
+    int graph[V][V] = { {0, 16, 13, 0, 0, 0},
+                        {0, 0, 10, 12, 0, 0},
+                        {0, 4, 0, 0, 14, 0},
+                        {0, 0, 9, 0, 0, 20},
+                        {0, 0, 0, 7, 0, 4},
+                        {0, 0, 0, 0, 0, 0} };
+
+    int source = 0, sink = 5;
+    int maxFlow = fordFulkerson(graph, source, sink);
+
+    printf("Maximum flow in the graph: %d\n", maxFlow);
+
+    return 0;
+}
